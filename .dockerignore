@@ -4,3 +4,5 @@
 .env
 .env.*
 npm-debug.log
+Dockerfile.old
+docker-compose.yml.bak

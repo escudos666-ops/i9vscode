@@ -7,6 +7,9 @@
       dockerfile: Dockerfile
     environment:
       NODE_ENV: development
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: llama3.2
     ports:
       - "3000:3000"
     command: npm run dev -- -H 0.0.0.0
