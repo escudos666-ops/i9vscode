@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Optical AI Connector Canvas</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="sidebar" aria-label="Workspace navigation">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">OC</div>
+          <div>
+            <h1>Optical Connector Canvas</h1>
+            <p>Open WebUI + customer database</p>
+          </div>
+        </div>
+
+        <section class="nav-section">
+          <div class="section-title">Workspace</div>
+          <button class="nav-item active" type="button">
+            <span class="dot dot-teal"></span>
+            Customer memory
+          </button>
+          <button class="nav-item" type="button">
+            <span class="dot dot-amber"></span>
+            Connector sign-in
+          </button>
+          <button class="nav-item" type="button">
+            <span class="dot dot-gray"></span>
+            Inventory sync
+          </button>
+        </section>
+
+        <section class="nav-section">
+          <div class="section-title">Connected areas</div>
+          <button class="agent-row selected" type="button">
+            <span class="agent-icon">DB</span>
+            <span>
+              <strong>Postgres CRM</strong>
+              <small>customers, prescriptions, inventory</small>
+            </span>
+          </button>
+          <button class="agent-row" type="button">
+            <span class="agent-icon">CX</span>
+            <span>
+              <strong>Connector hub</strong>
+              <small>shipping, shop, Microsoft, voice</small>
+            </span>
+          </button>
+          <button class="agent-row" type="button">
+            <span class="agent-icon">AI</span>
+            <span>
+              <strong>Open WebUI bot</strong>
+              <small>browser forms + support workflow</small>
+            </span>
+          </button>
+        </section>
+
+        <div class="sidebar-footer">
+          <button id="new-node" class="secondary-action" type="button">Add node</button>
+          <button id="reset-canvas" class="icon-button" type="button" aria-label="Reset canvas">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4v6h6M20 20v-6h-6"/><path d="M5.5 14A7 7 0 0 0 18 17.2M18.5 10A7 7 0 0 0 6 6.8"/></svg>
+          </button>
+        </div>
+      </aside>
+
+      <section class="workspace" aria-label="Canvas workspace">
+        <header class="topbar">
+          <div>
+            <h2>Business app wiring</h2>
+            <p>Bot actions route through safe connectors and store customer details in Postgres.</p>
+          </div>
+          <div class="toolbar" aria-label="Canvas tools">
+            <button class="tool-button active" type="button" data-tool="select" title="Select">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 3 14 8-7 2-3 7Z"/></svg>
+            </button>
+            <button class="tool-button" type="button" data-tool="sync" title="Sync status">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4v6h6M20 20v-6h-6"/><path d="M5.5 14A7 7 0 0 0 18 17.2M18.5 10A7 7 0 0 0 6 6.8"/></svg>
+            </button>
+            <button class="tool-button" type="button" data-tool="run" title="Run">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7Z"/></svg>
+            </button>
+            <button class="tool-button" type="button" data-tool="inspect" title="Inspect">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            </button>
+          </div>
+        </header>
+
+        <div class="canvas-wrap">
+          <div class="canvas-grid business-canvas" id="canvas" aria-label="Business connector canvas">
+            <svg class="wires" viewBox="0 0 920 620" preserveAspectRatio="none" aria-hidden="true">
+              <path d="M 160 142 C 260 92, 330 92, 430 142"></path>
+              <path d="M 160 238 C 274 298, 342 300, 456 250"></path>
+              <path d="M 560 150 C 660 104, 700 94, 800 132"></path>
+              <path d="M 560 244 C 680 290, 716 306, 836 286"></path>
+              <path d="M 468 336 C 380 418, 302 418, 218 500"></path>
+              <path d="M 542 338 C 626 426, 710 428, 794 508"></path>
+            </svg>
+
+            <article class="node prompt-node selected" data-node="Open WebUI bot" style="--x: 34px; --y: 72px;">
+              <div class="node-head">
+                <span class="node-type">Bot</span>
+                <span class="node-state ready">ready</span>
+              </div>
+              <h3>Open WebUI assistant</h3>
+              <p>Answers staff questions, starts workflows, and can use browser automation for website forms.</p>
+              <div class="node-meta">port: 8080 • proxy: 80</div>
+            </article>
+
+            <article class="node tool-node" data-node="Connector hub" style="--x: 392px; --y: 118px;">
+              <div class="node-head">
+                <span class="node-type">Hub</span>
+                <span class="node-state live">wired</span>
+              </div>
+              <h3>Connector sign-in hub</h3>
+              <p>PostNL, DHL Express, FedEx, Shopify, Microsoft 365, Enreach and Teams are registered here.</p>
+              <div class="node-meta">tokens: env/secret refs only</div>
+            </article>
+
+            <article class="node memory-node" data-node="Customer database" style="--x: 390px; --y: 340px;">
+              <div class="node-head">
+                <span class="node-type">Database</span>
+                <span class="node-state ready" id="database-state">checking</span>
+              </div>
+              <h3>Postgres customer memory</h3>
+              <p>Stores customers, prescriptions, frames, lenses, inventory, orders, shipments and sync logs.</p>
+              <div class="node-meta" id="database-meta">DATABASE_URL</div>
+            </article>
+
+            <article class="node" data-node="Shipping providers" style="--x: 692px; --y: 74px;">
+              <div class="node-head">
+                <span class="node-type">Shipping</span>
+                <span class="node-state idle">needs keys</span>
+              </div>
+              <h3>PostNL, DHL, FedEx</h3>
+              <p>Create labels, tracking events and shipment records connected to orders.</p>
+              <div class="node-meta">tables: orders + shipments</div>
+            </article>
+
+            <article class="node" data-node="Commerce providers" style="--x: 696px; --y: 262px;">
+              <div class="node-head">
+                <span class="node-type">Commerce</span>
+                <span class="node-state idle">oauth</span>
+              </div>
+              <h3>Shopify inventory sync</h3>
+              <p>Sync customers, frames, lenses, inventory quantities and order status with the webshop.</p>
+              <div class="node-meta">scopes: products, inventory, orders</div>
+            </article>
+
+            <article class="node" data-node="Microsoft 365" style="--x: 82px; --y: 424px;">
+              <div class="node-head">
+                <span class="node-type">Microsoft</span>
+                <span class="node-state idle">oauth</span>
+              </div>
+              <h3>Outlook, Calendar, SharePoint, OneDrive, Teams</h3>
+              <p>Use Microsoft Graph for mail context, appointments, documents and staff notifications.</p>
+              <div class="node-meta">tenant: MICROSOFT_TENANT_ID</div>
+            </article>
+
+            <article class="node" data-node="Optical inventory" style="--x: 682px; --y: 440px;">
+              <div class="node-head">
+                <span class="node-type">Stock</span>
+                <span class="node-state ready">schema</span>
+              </div>
+              <h3>Frames, lenses, prescriptions</h3>
+              <p>Separate tables keep optical products and medical prescription details structured.</p>
+              <div class="node-meta">GDPR: consent flags included</div>
+            </article>
+
+            <article class="node" data-node="Browser forms" style="--x: 42px; --y: 250px;">
+              <div class="node-head">
+                <span class="node-type">Browser</span>
+                <span class="node-state live">local</span>
+              </div>
+              <h3>Website form filling</h3>
+              <p>The existing Playwright service can fill allowed localhost/browser forms when called by tools.</p>
+              <div class="node-meta">port: 8788</div>
+            </article>
+          </div>
+
+          <form id="chat-form" class="composer">
+            <label for="prompt" class="sr-only">Message</label>
+            <textarea id="prompt" name="prompt" rows="2" placeholder="Ask the bot to inspect a customer, create a connector sign-in, or prepare a shipment..." required></textarea>
+            <button id="send" type="submit">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg>
+              Send
+            </button>
+          </form>
+        </div>
+
+        <footer class="status-strip" aria-label="Service status">
+          <span><i class="status-dot ok"></i> Open WebUI wired</span>
+          <span><i class="status-dot ok"></i> Connector registry added</span>
+          <span><i class="status-dot ok"></i> Postgres schema added</span>
+          <span id="zoom-label">Zoom 100%</span>
+        </footer>
+      </section>
+
+      <aside class="inspector" aria-label="Inspector">
+        <div class="inspector-head">
+          <span>Inspector</span>
+          <button id="run-flow" type="button">Check wiring</button>
+        </div>
+
+        <section class="inspector-card">
+          <div class="field-label">Selected node</div>
+          <h3 id="selected-title">Open WebUI bot</h3>
+          <p id="selected-copy">Answers staff questions, starts workflows, and can use browser automation for website forms.</p>
+        </section>
+
+        <section class="control-group">
+          <div class="section-title">Database records</div>
+          <div class="metric-grid" id="database-counts">
+            <span><strong>0</strong> customers</span>
+            <span><strong>0</strong> prescriptions</span>
+            <span><strong>0</strong> inventory</span>
+            <span><strong>0</strong> orders</span>
+          </div>
+        </section>
+
+        <section class="control-group connector-panel">
+          <div class="section-title">Connector sign-in</div>
+          <div id="connector-list" class="connector-list">
+            <article class="connector-row muted-row">Loading connector status...</article>
+          </div>
+        </section>
+
+        <section class="activity">
+          <div class="section-title">Run activity</div>
+          <div id="messages" class="messages" aria-live="polite">
+            <article class="message assistant">Business canvas loaded. Connector and database status will appear here.</article>
+          </div>
+        </section>
+      </aside>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,235 @@
+name: Docker Build & Push
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'custom-app/**'
+      - 'openwebui-browser-automator/**'
+      - 'docker-compose.yml'
+      - 'Dockerfile*'
+      - '.github/workflows/docker.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for agentic-business-tools
+        id: meta-tools
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/agentic-business-tools
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push agentic-business-tools
+        uses: docker/build-push-action@v5
+        with:
+          context: ./custom-app/backend
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.meta-tools.outputs.tags }}
+          labels: ${{ steps.meta-tools.outputs.labels }}
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/agentic-business-tools:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/agentic-business-tools:buildcache,mode=max
+
+      - name: Extract metadata for playwright-mcp
+        id: meta-playwright
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/playwright-mcp
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push playwright-mcp
+        uses: docker/build-push-action@v5
+        with:
+          context: ./openwebui-browser-automator
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.meta-playwright.outputs.tags }}
+          labels: ${{ steps.meta-playwright.outputs.labels }}
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/playwright-mcp:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/playwright-mcp:buildcache,mode=max
+
+  coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: './custom-app/backend/package-lock.json'
+
+      - name: Install dependencies
+        run: |
+          cd custom-app/backend
+          npm ci
+
+      - name: Run tests with coverage
+        run: |
+          cd custom-app/backend
+          npm run test:cov
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./custom-app/backend/coverage/coverage-final.json
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+          verbose: true
+
+      - name: Comment PR with coverage report
+        if: github.event_name == 'pull_request'
+        uses: romeovs/lcov-reporter-action@v0.3.1
+        with:
+          lcov-file: ./custom-app/backend/coverage/lcov.info
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  test:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build agentic-business-tools for testing
+        uses: docker/build-push-action@v5
+        with:
+          context: ./custom-app/backend
+          load: true
+          tags: agentic-business-tools:test
+
+      - name: Run service health check
+        run: |
+          docker run --rm \
+            --name test-service \
+            -d \
+            -p 3001:3001 \
+            -e NODE_ENV=test \
+            agentic-business-tools:test
+          
+          sleep 10
+          
+          # Wait for service to be ready
+          for i in {1..30}; do
+            if curl -f http://localhost:3001/api/health > /dev/null 2>&1; then
+              echo "Service is healthy"
+              exit 0
+            fi
+            echo "Attempt $i: Waiting for service..."
+            sleep 2
+          done
+          
+          echo "Service failed to become healthy"
+          docker logs test-service
+          exit 1
+
+      - name: Clean up test containers
+        if: always()
+        run: docker stop test-service || true
+
+  security-scan:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build agentic-business-tools for scanning
+        uses: docker/build-push-action@v5
+        with:
+          context: ./custom-app/backend
+          load: true
+          tags: agentic-business-tools:scan
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'agentic-business-tools:scan'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  compose-validation:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate docker-compose.yml
+        run: |
+          docker compose -f docker-compose.yml config > /dev/null
+          echo "✓ docker-compose.yml is valid"
+
+      - name: Check required environment variables
+        run: |
+          required_vars=(
+            "POSTGRES_DB"
+            "POSTGRES_USER"
+            "POSTGRES_PASSWORD"
+            "WEBUI_SECRET_KEY"
+            "WEBUI_JWT_SECRET"
+            "OLLAMA_BASE_URL"
+          )
+          
+          for var in "${required_vars[@]}"; do
+            if ! grep -q "$var" .env.example docker-compose.yml; then
+              echo "Warning: $var not documented"
+            fi
+          done
+          echo "✓ Environment variables validated"

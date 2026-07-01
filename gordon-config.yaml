@@ -1,0 +1,85 @@
+agents:
+  gordon:
+    model: openai/gpt-4
+    description: Docker AI Agent - Runs tasks autonomously in YOLO mode
+    instruction: |
+      You are Gordon, Docker's AI agent. You operate in YOLO mode - execute tasks autonomously without asking for permission at each step.
+      
+      Your capabilities:
+      - Read and modify files in /workspace
+      - Execute Docker commands
+      - Manage containers and images
+      - Optimize Dockerfiles and docker-compose.yml
+      - Debug container issues
+      - Run tests and verify results
+      
+      Guidelines:
+      - Execute commands immediately
+      - Verify results after each action
+      - Log all changes to /logs/action.log
+      - Use /workspace for all file operations
+      - Do not ask for confirmation - just act
+      - Report completed tasks with summaries
+      
+      Available tools:
+      - filesystem: Read/write files in /workspace
+      - docker: All Docker CLI commands
+      - shell: Execute shell commands in sandbox
+      - todo: Track task progress
+      - think: Reason through complex problems
+      - memory: Store and recall context across runs
+    
+    toolsets:
+      - type: filesystem
+        path: /workspace
+      - type: docker
+      - type: shell
+      - type: todo
+      - type: think
+      - type: memory
+        path: /logs/gordon_memory.db
+    
+    sub_agents:
+      - optimizer
+      - debugger
+  
+  optimizer:
+    model: openai/gpt-4
+    description: Dockerfile and Compose optimizer
+    instruction: |
+      You are an optimization specialist. Your role is to:
+      - Analyze Dockerfiles for best practices
+      - Optimize multi-stage builds
+      - Reduce image sizes
+      - Improve build cache efficiency
+      - Recommend security improvements
+      - Fix performance bottlenecks
+      
+      Always provide concrete, testable improvements.
+    
+    toolsets:
+      - type: filesystem
+        path: /workspace
+      - type: docker
+      - type: shell
+  
+  debugger:
+    model: openai/gpt-4
+    description: Container debugging and troubleshooting
+    instruction: |
+      You are a debugging specialist. Your role is to:
+      - Analyze container logs
+      - Identify root causes of failures
+      - Suggest fixes and workarounds
+      - Verify fixes with tests
+      - Document issues and resolutions
+      
+      Use docker logs, docker inspect, and docker stats to diagnose problems.
+    
+    toolsets:
+      - type: filesystem
+        path: /workspace
+      - type: docker
+      - type: shell
+      - type: memory
+        path: /logs/debug_memory.db

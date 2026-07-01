@@ -1,0 +1,15 @@
+services:
+  browser-automator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PLAYWRIGHT_PYTHON_IMAGE: ${PLAYWRIGHT_PYTHON_IMAGE:-mcr.microsoft.com/playwright/python:v1.49.1-jammy}
+    container_name: browser-automator
+    ports:
+      - "8788:8788"
+    environment:
+      - AUTOMATOR_API_TOKEN=change-me-token
+      - AUTOMATOR_ALLOWED_HOSTS=localhost,127.0.0.1
+      - AUTOMATOR_HEADLESS=true
+    restart: unless-stopped

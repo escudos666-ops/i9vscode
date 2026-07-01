@@ -1,0 +1,91 @@
+{
+  "name": "AI LLM Stack Dev",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "18"
+    },
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.11"
+    },
+    "ghcr.io/devcontainers/features/postgresql-client:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.remote-repositories",
+        "ms-vscode-remote.remote-containers",
+        "ms-vscode-docker.docker-explorer",
+        "ms-vscode-docker.remote-containers",
+        "ms-azuretools.vscode-docker",
+        "charliermarsh.ruff",
+        "ms-python.python",
+        "ms-python.debugpy",
+        "ms-python.vscode-pylance",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-vscode.makefile-tools",
+        "ms-mssql.sql-bindings",
+        "ms-vscode.remote-server",
+        "GitHub.copilot"
+      ],
+      "settings": {
+        "docker.host": "unix:///var/run/docker.sock",
+        "[python]": {
+          "editor.formatOnSave": true,
+          "editor.defaultFormatter": "charliermarsh.ruff",
+          "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit"
+          }
+        },
+        "[javascript]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.formatOnSave": true
+        },
+        "[yaml]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.formatOnSave": true
+        }
+      }
+    }
+  },
+  "forwardPorts": [
+    8080,
+    3001,
+    5432,
+    11434,
+    8788,
+    6379,
+    9090,
+    3000
+  ],
+  "portAttributes": {
+    "8080": {
+      "label": "Open WebUI",
+      "onAutoForward": "notify"
+    },
+    "3001": {
+      "label": "Agentic Business Tools",
+      "onAutoForward": "notify"
+    },
+    "5432": {
+      "label": "PostgreSQL",
+      "onAutoForward": "silent"
+    },
+    "11434": {
+      "label": "Ollama API",
+      "onAutoForward": "silent"
+    }
+  },
+  "mounts": [
+    "source=${localEnv:HOME}/.docker/config.json,target=/root/.docker/config.json,readonly"
+  ],
+  "remoteUser": "root",
+  "postCreateCommand": "docker --version && docker-compose --version && node --version && python3 --version",
+  "remoteEnv": {
+    "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
+  }
+}

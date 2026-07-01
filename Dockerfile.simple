@@ -1,0 +1,13 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Health check endpoint
+RUN echo 'const http = require("http"); http.createServer((req, res) => { res.writeHead(200); res.end(JSON.stringify({status:"healthy", service:"demo-api"})); }).listen(8000, () => console.log("Server on 8000"));' > server.js
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=2 \
+    CMD node -e "require('http').get('http://localhost:8000', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1)).on('error', () => process.exit(1))" || exit 1
+
+CMD ["node", "server.js"]
