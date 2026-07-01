@@ -1,0 +1,19 @@
+services:
+  playwright-mcp:
+    profiles:
+      - disabled-playwright-mcp
+
+  open-webui:
+    depends_on:
+      - ollama
+      - postgres
+      - redis
+      - chroma
+      - tika
+      - tools-api
+      - open-terminal
+
+  tools-api:
+    depends_on:
+      - ollama
+      - n8n

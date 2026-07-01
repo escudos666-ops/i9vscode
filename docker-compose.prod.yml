@@ -1,0 +1,156 @@
+services:
+  ollama:
+    image: ollama/ollama:${OLLAMA_TAG}
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "${OLLAMA_BIND:-127.0.0.1}:${OLLAMA_PORT:-11434}:11434"
+    environment:
+      OLLAMA_HOST: 0.0.0.0
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - agentnet
+    restart: unless-stopped
+    mem_limit: 12g
+    cpus: 6
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:${OPEN_WEBUI_TAG}
+    ports:
+      - "${OPEN_WEBUI_BIND:-127.0.0.1}:${OPEN_WEBUI_PORT:-3000}:8080"
+    volumes:
+      - open-webui_data:/app/backend/data
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+      MCP_INITIALIZE_TIMEOUT: 20
+      TOOL_SERVER_CONNECTIONS: '[{"url":"http://agentics-mcp:8766/mcp","path":"","type":"mcp","auth_type":"none","headers":{},"key":"","config":{"enable":true,"access_grants":[{"principal_type":"user","principal_id":"*","permission":"read"}]},"info":{"id":"agentics_mcp","name":"Agentics MCP","description":"Local Agentics MCP tools for service health checks and Agentics automations."}}]'
+    depends_on:
+      ollama:
+        condition: service_healthy
+      agentics-mcp:
+        condition: service_healthy
+    networks:
+      - agentnet
+    restart: unless-stopped
+    mem_limit: 4g
+    cpus: 2
+
+  agentics-mcp:
+    image: ghcr.io/open-webui/open-webui:${OPEN_WEBUI_TAG}
+    command: ["python", "/app/mcp/agentics_mcp_server.py"]
+    ports:
+      - "127.0.0.1:8766:8766"
+    volumes:
+      - ./mcp/agentics_mcp_server.py:/app/mcp/agentics_mcp_server.py:ro
+    environment:
+      MCP_NAME: Agentics MCP
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 8766
+      MCP_PATH: /mcp
+      N8N_CHAT_URL: http://n8n:5678/webhook/agentics-chat
+      N8N_WHATSAPP_URL: http://n8n:5678/webhook/agentics-whatsapp-send
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8766/health', timeout=5).status == 200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    networks:
+      - agentnet
+    restart: unless-stopped
+    mem_limit: 1g
+    cpus: 1
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:${N8N_TAG}
+    ports:
+      - "${N8N_BIND:-127.0.0.1}:${N8N_PORT:-5678}:5678"
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_DB}
+      DB_POSTGRESDB_USER: ${POSTGRES_USER}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - agentnet
+    restart: unless-stopped
+    mem_limit: 2g
+    cpus: 2
+
+  postgres:
+    image: postgres:${POSTGRES_TAG}
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - agentnet
+    restart: unless-stopped
+    mem_limit: 2g
+    cpus: 2
+
+  redis:
+    image: redis:${REDIS_TAG}
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    networks:
+      - agentnet
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 1
+
+  minio:
+    image: minio/minio:${MINIO_TAG}
+    ports:
+      - "${MINIO_BIND:-127.0.0.1}:${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_BIND:-127.0.0.1}:${MINIO_CONSOLE_PORT:-9001}:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - agentnet
+    restart: unless-stopped
+    mem_limit: 2g
+    cpus: 2
+
+networks:
+  agentnet:
+    driver: bridge
+
+volumes:
+  ollama_data:
+  open-webui_data:
+  n8n_data:
+  postgres_data:
+  redis_data:
+  minio_data:

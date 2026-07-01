@@ -1,0 +1,13 @@
+# Development overrides - for hot reload and debugging
+# Usage: docker compose -f docker-compose.yml -f docker-compose.override.yml up
+# Or just: docker compose up (this file is auto-loaded if present)
+
+services:
+  open-webui:
+    # Keep local WebUI stable and quiet by default.
+    environment:
+      - LOG_LEVEL=INFO
+      - WEBUI_DEBUG=false
+    # Optional: Mount local config for development
+    # volumes:
+    #   - ./webui-config:/app/backend/data/config

@@ -1,0 +1,56 @@
+# ============================================================================
+# AGENTICS UNIFIED DASHBOARD — COMPOSE OVERRIDE
+# ============================================================================
+# Single-image: Node.js serves both API and frontend
+# Network: ai-llm-stack_ai-network (matches existing stack)
+# URL: http://localhost:9999
+# ============================================================================
+
+services:
+  unified-dashboard:
+    build:
+      context: ./agentics-unified-dashboard/backend
+      dockerfile: Dockerfile
+    image: agentics-unified-dashboard:latest
+    container_name: unified-dashboard
+    restart: unless-stopped
+    ports:
+      - "9999:9000"
+    environment:
+      NODE_ENV: production
+      PORT: "9000"
+      # ── Actual running service names on ai-llm-stack_ai-network ──
+      OLLAMA_URL:       "http://ollama-service:11434"
+      WEBUI_URL:        "http://webui-service:8080"
+      ORCHESTRATOR_URL: "http://agentics-orch-lenovo:3001"
+      N8N_URL:          "http://n8n:5678"
+      TOOLS_API_URL:    "http://agentic-tools-lenovo:3001"
+      MCP_URL:          "http://agentics-mcp-lenovo:8000"
+      CHROMA_URL:       "http://chroma-lenovo:8000"
+      TIKA_URL:         "http://tika-lenovo:9998"
+      MINIO_URL:        "http://minio-lenovo:9000"
+      WAHA_URL:         "http://waha-lenovo:3000"
+      PROMETHEUS_URL:   "http://prometheus-lenovo:9090"
+      GRAFANA_URL:      "http://grafana-lenovo:3000"
+      LOKI_URL:         "http://loki-lenovo:3100"
+      POSTGRAPHILE_URL: "http://postgraphile-lenovo:5000"
+    networks:
+      - ai-network
+    cpus: "2.0"
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9000/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "2"
+
+networks:
+  ai-network:
+    external: true
+    name: ai-llm-stack_ai-network

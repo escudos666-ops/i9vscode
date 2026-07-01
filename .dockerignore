@@ -1,0 +1,71 @@
+# Version control
+.git
+.gitignore
+.github
+
+# Node
+node_modules
+npm-debug.log
+package-lock.json
+yarn.lock
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+.venv
+venv
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Testing
+.pytest_cache
+coverage
+.nyc_output
+
+# Build artifacts
+dist
+build
+*.tgz
+
+# Documentation
+*.md
+LICENSE
+README
+docs
+
+# OS
+.DS_Store
+Thumbs.db
+.vscode
+.idea
+
+# Temporary
+*.tmp
+*.log
+temp
+tmp
+cache
+
+# Archives and backups
+*.zip
+*.rar
+*.tar.gz
+*.bak
+backup*
+
+# Executables (already system-provided)
+*.exe
+*.msi
+*.pkg
+
+# Workspace files
+gordon_workspace
+gordon_tasks
+gordon_logs
+blobs
+chat-files-archive*

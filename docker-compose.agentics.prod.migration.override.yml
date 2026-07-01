@@ -1,0 +1,50 @@
+# docker-compose.agentics.prod.migration.override.yml
+
+services:
+  open-webui:
+    volumes:
+      - open-webui_data:/app/backend/data
+      - ./agent-workspace:/workspace:rw
+
+  ollama:
+    volumes:
+      - ollama_data:/root/.ollama
+
+  postgres:
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  n8n:
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./agent-workspace:/workspace:rw
+
+  chroma:
+    volumes:
+      - ./data/chroma:/chroma/chroma
+
+  open-terminal:
+    volumes:
+      - open_terminal_data:/data
+      - ./agent-workspace:/workspace:rw
+
+volumes:
+  open-webui_data:
+    external: true
+    name: webui_data
+
+  ollama_data:
+    external: true
+    name: ai-llm_ollama_data
+
+  postgres_data:
+    external: true
+    name: ai-llm_postgres_data
+
+  n8n_data:
+    external: true
+    name: agentics_n8n_data
+
+  open_terminal_data:
+    external: true
+    name: agentics_open_terminal_home

@@ -1,0 +1,128 @@
+name: agentics-recover
+
+networks:
+  agentnet:
+    driver: bridge
+
+volumes:
+  webui_data:
+    external: true
+  ai-llm_postgres_data:
+    external: true
+  agentics_n8n_data:
+    external: true
+  agentics_open_terminal_home:
+    external: true
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: recover-postgres
+    restart: unless-stopped
+    networks:
+      - agentnet
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - ai-llm_postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=agentics
+      - POSTGRES_PASSWORD=your-postgres-password-change-this-in-production
+      - POSTGRES_DB=openwebui
+
+  chroma:
+    image: chromadb/chroma:latest
+    container_name: recover-chroma
+    restart: unless-stopped
+    networks:
+      - agentnet
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./data/chroma:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+
+  tika:
+    image: apache/tika:latest-full
+    container_name: recover-tika
+    restart: unless-stopped
+    networks:
+      - agentnet
+    ports:
+      - "127.0.0.1:9998:9998"
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: recover-n8n
+    restart: unless-stopped
+    networks:
+      - agentnet
+    ports:
+      - "127.0.0.1:5678:5678"
+    volumes:
+      - agentics_n8n_data:/home/node/.n8n
+      - ./agent-workspace:/workspace
+    environment:
+      - GENERIC_TIMEZONE=Europe/Amsterdam
+      - N8N_HOST=127.0.0.1
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://127.0.0.1:5678
+
+  open-terminal:
+    image: ghcr.io/open-webui/open-terminal
+    container_name: recover-open-terminal
+    restart: unless-stopped
+    networks:
+      - agentnet
+    ports:
+      - "127.0.0.1:18000:8000"
+    volumes:
+      - agentics_open_terminal_home:/home/user
+      - ./agent-workspace:/home/user/workspace
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: recover-open-webui
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - chroma
+      - tika
+      - n8n
+      - open-terminal
+    networks:
+      - agentnet
+    ports:
+      - "127.0.0.1:3000:8080"
+    volumes:
+      - webui_data:/app/backend/data
+      - ./agent-workspace:/workspace
+    environment:
+      - WEBUI_NAME=Agentics Recover
+      - WEBUI_URL=http://127.0.0.1:3000
+      - ENABLE_SIGNUP=false
+
+      - ENABLE_OLLAMA_API=true
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+
+      - ENABLE_OPENAI_API=false
+      - OPENAI_API_BASE_URL=
+      - OPENAI_API_KEY=
+
+      - DATABASE_URL=postgresql://agentics:your-postgres-password-change-this-in-production@postgres:5432/openwebui
+
+      - ENABLE_RAG=true
+      - CHROMA_HTTP_HOST=chroma
+      - CHROMA_HTTP_PORT=8000
+      - CONTENT_EXTRACTION_ENGINE=tika
+      - TIKA_SERVER_URL=http://tika:9998
+
+      - RAG_EMBEDDING_ENGINE=ollama
+      - RAG_EMBEDDING_MODEL=nomic-embed-text
+      - RAG_OLLAMA_BASE_URL=http://host.docker.internal:11434
+
+      - N8N_URL=http://n8n:5678
+      - OPEN_TERMINAL_URL=http://open-terminal:8000

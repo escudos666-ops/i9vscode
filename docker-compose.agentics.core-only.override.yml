@@ -1,0 +1,38 @@
+services:
+  playwright-mcp:
+    profiles: ["disabled"]
+
+  browser-vnc:
+    profiles: ["disabled"]
+
+  python-sandbox:
+    profiles: ["disabled"]
+
+  prometheus:
+    profiles: ["disabled"]
+
+  loki:
+    profiles: ["disabled"]
+
+  grafana:
+    profiles: ["disabled"]
+
+  minio:
+    profiles: ["disabled"]
+
+  n8n:
+    profiles: ["disabled"]
+
+  tools-api:
+    profiles: ["disabled"]
+
+  open-terminal:
+    profiles: ["disabled"]
+
+  open-webui:
+    depends_on:
+      - ollama
+      - postgres
+      - redis
+      - chroma
+      - tika

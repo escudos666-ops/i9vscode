@@ -1,0 +1,615 @@
+name: agentics-lenovo-i9
+
+# ============================================================================
+# LENOVO I9 CPU-FIRST AGENTICS STACK
+# ============================================================================
+# No NVIDIA GPU, no CUDA, no runtime: nvidia
+# Intel NPU deferred to Phase 2+ (OpenVINO sidecar bridge)
+# Windows Docker Desktop compatible
+#
+# Usage:
+#   docker compose -f docker-compose.yml \
+#     -f docker-compose.lenovo-i9-cpu-npu.override.yml \
+#     up -d postgres ollama open-webui
+#
+# ============================================================================
+
+services:
+  postgres:
+    container_name: postgres-lenovo
+    ports:
+      - "5432:5432"
+    # CPU-friendly: reduce parallel connections
+    cpus: "2.0"
+    mem_limit: 2g
+    mem_reservation: 512m
+    # Keep data persistence
+    volumes:
+      - postgres_data_lenovo:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/001-init-db.sql:ro
+
+  ollama:
+    container_name: ollama-lenovo
+    restart: unless-stopped
+    init: true
+    # Host port 11434 (not 11435)
+    ports:
+      - "11434:11434"
+    environment:
+      # ========================================================================
+      # CPU-ONLY OLLAMA CONFIG FOR I9
+      # ========================================================================
+      # Parallel: 1 to avoid CPU thrashing on multi-task scheduling
+      OLLAMA_NUM_PARALLEL: "1"
+      
+      # Threads: let system detect, or set to physical cores (e.g., 24 for i9-14900K)
+      OLLAMA_NUM_THREAD: "0"
+      
+      # Keep-alive: 10 minutes (models stay in memory longer)
+      OLLAMA_KEEP_ALIVE: "10m"
+      
+      # KV cache quantization: q8_0 for lower VRAM pressure on CPU
+      OLLAMA_KV_CACHE_TYPE: "q8_0"
+      
+      # Disable NVIDIA completely
+      CUDA_VISIBLE_DEVICES: "-1"
+      NVIDIA_VISIBLE_DEVICES: "void"
+      NVIDIA_VISIBLE_DEVICES_OVERRIDES: ""
+      
+      # Default model: llama3.2:3b (lightweight, good reasoning)
+      OLLAMA_DEFAULT_MODEL: "llama3.2:3b"
+    
+    volumes:
+      - ollama_data_lenovo:/root/.ollama
+    
+    networks:
+      - agentics_agentnet
+    
+    # CPU-first resource limits (i9 has ~24 cores)
+    cpus: "16.0"
+    mem_limit: 16g
+    mem_reservation: 8g
+    
+    # Health check depends on models being pulled first
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
+
+  open-webui:
+    container_name: webui-lenovo
+    restart: unless-stopped
+    init: true
+    # Port 3000 on host -> 8080 in container
+    ports:
+      - "3000:8080"
+    environment:
+      # Connect to local Ollama on port 11434
+      OLLAMA_BASE_URL: "http://ollama-lenovo:11434"
+      ENABLE_OLLAMA_API: "true"
+      
+      # RAG: use nomic-embed-text for embeddings
+      ENABLE_RAG: "true"
+      RAG_EMBEDDING_ENGINE: "ollama"
+      RAG_EMBEDDING_MODEL: "nomic-embed-text"
+      RAG_OLLAMA_BASE_URL: "http://ollama-lenovo:11434"
+      
+      # Disable image generation (CPU-friendly)
+      ENABLE_IMAGE_GENERATION: "false"
+      
+      # Function calling for tool integration
+      ENABLE_FUNCTION_CALLING: "true"
+      
+      # Context limits for 3B model
+      MAX_CONTEXT_LENGTH: "2048"
+      
+      # Postgres backend
+      DATABASE_URL: "postgres://webui:your-postgres-password-change-this-in-production@postgres-lenovo:5432/openwebui"
+      
+      # Secrets
+      WEBUI_SECRET_KEY: "lenovo-cpu-npu-stack"
+      WEBUI_JWT_SECRET: "lenovo-cpu-npu-jwt"
+      
+      # Logging
+      LOG_LEVEL: "INFO"
+      WEBUI_DEBUG: "false"
+      UVICORN_WORKERS: "1"
+    
+    volumes:
+      - webui_data_lenovo:/app/backend/data
+    
+    networks:
+      - agentics_agentnet
+    
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    
+    cpus: "4.0"
+    mem_limit: 6g
+    mem_reservation: 2g
+    
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8080/health')\" >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+# ============================================================================
+# AGENT DASHBOARD & ORCHESTRATOR
+# ============================================================================
+# Port 8787: Personal Assistant / Agent Dashboard
+# Port 8788: Agentics Orchestrator (maps container 3001 -> host 8788)
+# Network: agentics_agentnet
+# ============================================================================
+
+  agent-dashboard:
+    image: ghcr.io/agentics-ai/agent-dashboard:latest
+    container_name: agent-dashboard-lenovo
+    restart: unless-stopped
+    init: true
+    ports:
+      - "8787:3000"
+    environment:
+      REACT_APP_API_URL: "http://localhost:8788"
+      REACT_APP_WEBUI_URL: "http://localhost:3000"
+      NODE_ENV: "production"
+    networks:
+      - agentics_agentnet
+    depends_on:
+      open-webui:
+        condition: service_healthy
+    cpus: "2.0"
+    mem_limit: 512m
+    mem_reservation: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  agentics-orchestrator:
+    image: ghcr.io/agentics-ai/orchestrator:latest
+    container_name: agentics-orch-lenovo
+    restart: unless-stopped
+    init: true
+    ports:
+      - "8788:3001"
+    environment:
+      # Structured planner (not streaming)
+      ORCHESTRATOR_MODE: "structured"
+      STREAM_RESPONSES: "false"
+      
+      # Model for orchestration (CPU-friendly 3B)
+      ORCHESTRATOR_MODEL: "llama3.2:3b"
+      
+      # Model for coding tasks (only when needed; 7B is heavier)
+      CODING_MODEL: "qwen2.5-coder:7b"
+      
+      # Ollama backend
+      OLLAMA_URL: "http://ollama-lenovo:11434"
+      OLLAMA_API_URL: "http://ollama-lenovo:11434/api"
+      
+      # N8N integration
+      N8N_URL: "http://n8n:5678"
+      
+      # Tools API
+      TOOLS_API_URL: "http://agentic-business-tools:3001"
+      
+      # Docker socket (restricted proxy, not TCP)
+      DOCKER_SOCKET_PATH: "/var/run/docker.sock"
+      
+      # WebUI backend
+      WEBUI_URL: "http://open-webui:8080"
+      
+      # Logging
+      LOG_LEVEL: "info"
+      DEBUG: "false"
+    
+    networks:
+      - agentics_agentnet
+    
+    depends_on:
+      open-webui:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    
+    volumes:
+      # Read-only Docker socket (safer than TCP 2375)
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    
+    cpus: "4.0"
+    mem_limit: 2g
+    mem_reservation: 1g
+    
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+# ============================================================================
+# OPTIONAL: N8N WORKFLOWS
+# ============================================================================
+
+  n8n:
+    image: docker.io/n8nio/n8n:latest
+    container_name: n8n-lenovo
+    restart: unless-stopped
+    init: true
+    ports:
+      - "5678:3000"
+    environment:
+      N8N_SECURE_COOKIE: "false"
+      N8N_EDITOR_BASE_URL: "http://localhost:5678"
+      DATABASE_URL: "postgres://webui:your-postgres-password-change-this-in-production@postgres-lenovo:5432/n8n"
+    networks:
+      - agentics_agentnet
+    depends_on:
+      postgres:
+        condition: service_healthy
+    cpus: "2.0"
+    mem_limit: 1g
+    mem_reservation: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+# ============================================================================
+# OPTIONAL: AGENTIC BUSINESS TOOLS API
+# ============================================================================
+# Host port 8765 -> container 3001
+# (Not 3001 to avoid conflict with WAHA on 3001)
+# ============================================================================
+
+  agentic-business-tools:
+    image: ghcr.io/agentics-ai/business-tools:latest
+    container_name: agentic-tools-lenovo
+    restart: unless-stopped
+    init: true
+    ports:
+      - "8765:3001"
+    environment:
+      NODE_ENV: "production"
+      PORT: "3001"
+      OLLAMA_API_BASE_URL: "http://ollama-lenovo:11434/api"
+      OLLAMA_MODEL: "llama3.2:3b"
+      DATABASE_URL: "postgres://webui:your-postgres-password-change-this-in-production@postgres-lenovo:5432/openwebui"
+      # API keys loaded from .env or secrets manager
+      POSTNL_API_KEY: ""
+      DHL_EXPRESS_API_KEY: ""
+      FEDEX_CLIENT_ID: ""
+      SHOPIFY_SHOP_DOMAIN: ""
+      MICROSOFT_TENANT_ID: ""
+      ENREACH_CLIENT_ID: ""
+    networks:
+      - agentics_agentnet
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    cpus: "2.0"
+    mem_limit: 512m
+    mem_reservation: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+# ============================================================================
+# OPTIONAL: BROWSER AUTOMATION & VNC
+# ============================================================================
+
+  browser-use:
+    image: ghcr.io/browser-use/browser-use:latest
+    container_name: browser-use-lenovo
+    restart: unless-stopped
+    init: true
+    ports:
+      - "6080:6080"
+      - "7788:8787"
+      - "5901:5900"
+      - "9222:9222"
+    environment:
+      DISPLAY: ":1"
+      VNC_PASSWORD: "password"
+    networks:
+      - agentics_agentnet
+    cpus: "4.0"
+    mem_limit: 2g
+    mem_reservation: 1g
+    shm_size: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:6080 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+# ============================================================================
+# OPTIONAL: MCP TOOLKIT & SEARCH
+# ============================================================================
+
+  agentics-mcp:
+    image: ghcr.io/agentics-ai/mcp-toolkit:latest
+    container_name: agentics-mcp-lenovo
+    restart: unless-stopped
+    init: true
+    ports:
+      - "8766:8000"
+    environment:
+      LOG_LEVEL: "info"
+    networks:
+      - agentics_agentnet
+    depends_on:
+      open-webui:
+        condition: service_healthy
+    cpus: "1.0"
+    mem_limit: 256m
+    mem_reservation: 128m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+# ============================================================================
+# OPTIONAL: DATA & SEARCH BACKENDS
+# ============================================================================
+
+  chroma:
+    image: docker.io/chromadb/chroma:latest
+    container_name: chroma-lenovo
+    restart: unless-stopped
+    init: true
+    ports:
+      - "8001:8000"
+    networks:
+      - agentics_agentnet
+    cpus: "2.0"
+    mem_limit: 1g
+    mem_reservation: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  tika:
+    image: docker.io/apache/tika:latest
+    container_name: tika-lenovo
+    restart: unless-stopped
+    init: true
+    ports:
+      - "9998:9998"
+    networks:
+      - agentics_agentnet
+    cpus: "2.0"
+    mem_limit: 1g
+    mem_reservation: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9998/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  minio:
+    image: docker.io/minio/minio:latest
+    container_name: minio-lenovo
+    restart: unless-stopped
+    init: true
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: "minioadmin"
+      MINIO_ROOT_PASSWORD: "minioadmin"
+    networks:
+      - agentics_agentnet
+    cpus: "2.0"
+    mem_limit: 1g
+    mem_reservation: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+# ============================================================================
+# OPTIONAL: MESSAGING & COMMUNICATION
+# ============================================================================
+
+  waha:
+    image: docker.io/devlikeapro/waha:latest
+    container_name: waha-lenovo
+    restart: unless-stopped
+    init: true
+    ports:
+      - "3001:3000"
+    environment:
+      API_PORT: "3000"
+    networks:
+      - agentics_agentnet
+    cpus: "1.0"
+    mem_limit: 512m
+    mem_reservation: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+# ============================================================================
+# OPTIONAL: OBSERVABILITY & MONITORING
+# ============================================================================
+
+  prometheus:
+    image: docker.io/prom/prometheus:latest
+    container_name: prometheus-lenovo
+    restart: unless-stopped
+    init: true
+    ports:
+      - "9090:9090"
+    environment:
+      TZ: "UTC"
+    networks:
+      - agentics_agentnet
+    cpus: "1.0"
+    mem_limit: 512m
+    mem_reservation: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/healthy || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  grafana:
+    image: docker.io/grafana/grafana:latest
+    container_name: grafana-lenovo
+    restart: unless-stopped
+    init: true
+    ports:
+      - "3002:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: "admin"
+      GF_INSTALL_PLUGINS: ""
+    networks:
+      - agentics_agentnet
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    cpus: "1.0"
+    mem_limit: 512m
+    mem_reservation: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  loki:
+    image: docker.io/grafana/loki:latest
+    container_name: loki-lenovo
+    restart: unless-stopped
+    init: true
+    ports:
+      - "3100:3100"
+    networks:
+      - agentics_agentnet
+    cpus: "1.0"
+    mem_limit: 512m
+    mem_reservation: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3100/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  cadvisor:
+    image: docker.io/gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor-lenovo
+    restart: unless-stopped
+    init: true
+    ports:
+      - "8089:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    networks:
+      - agentics_agentnet
+    cpus: "1.0"
+    mem_limit: 256m
+    mem_reservation: 128m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+# ============================================================================
+# OPTIONAL: POSTGRAPHILE GraphQL API
+# ============================================================================
+
+  postgraphile:
+    image: docker.io/graphile/postgraphile:latest
+    container_name: postgraphile-lenovo
+    restart: unless-stopped
+    init: true
+    ports:
+      - "5000:5000"
+    environment:
+      DATABASE_URL: "postgres://webui:your-postgres-password-change-this-in-production@postgres-lenovo:5432/openwebui"
+      PG_HOST: "postgres-lenovo"
+      PG_PORT: "5432"
+      PG_USER: "webui"
+      PG_PASSWORD: "your-postgres-password-change-this-in-production"
+      PG_DATABASE: "openwebui"
+    networks:
+      - agentics_agentnet
+    depends_on:
+      postgres:
+        condition: service_healthy
+    cpus: "1.0"
+    mem_limit: 512m
+    mem_reservation: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/graphql || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+# ============================================================================
+# PERSISTENT VOLUMES (Lenovo-specific)
+# ============================================================================
+
+volumes:
+  ollama_data_lenovo:
+    name: agentics_lenovo_ollama_data
+    driver: local
+  webui_data_lenovo:
+    name: agentics_lenovo_webui_data
+    driver: local
+  postgres_data_lenovo:
+    name: agentics_lenovo_postgres_data
+    driver: local
+
+# ============================================================================
+# NETWORK (Lenovo-specific)
+# ============================================================================
+# Use agentics_agentnet for all services
+# ============================================================================
+
+networks:
+  agentics_agentnet:
+    name: agentics_agentnet
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.24.0.0/16

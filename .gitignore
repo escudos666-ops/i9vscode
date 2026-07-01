@@ -1,0 +1,43 @@
+# Agentics i9 Stack — .gitignore
+node_modules/
+.env
+.env.local
+.env.prod
+.env.*.local
+*.log
+npm-debug.log*
+.next/
+out/
+dist/
+build/
+.DS_Store
+Thumbs.db
+
+# Docker volumes / data
+data/
+tmp/
+backups/
+blobs/
+output/
+agent-workspace/
+
+# Secrets
+secrets/
+*.pem
+*.key
+*.crt
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# VS Code
+.vscode/settings.json
+
+# Kubernetes generated
+k8s-generated/
+
+# Large files
+*.tar.gz
+*.zip

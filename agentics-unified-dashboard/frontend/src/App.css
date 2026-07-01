@@ -1,0 +1,612 @@
+/* ============================================================================
+   AGENTICS UNIFIED DASHBOARD — STYLES
+   ============================================================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+  color: #e0e0e0;
+}
+
+/* ============================================================================
+   HEADER
+   ============================================================================ */
+
+.dashboard-header {
+  background: linear-gradient(90deg, #1a1a2e 0%, #16213e 100%);
+  border-bottom: 2px solid #00d4ff;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 212, 255, 0.15);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1920px;
+  margin: 0 auto;
+}
+
+.dashboard-header h1 {
+  font-size: 2.5rem;
+  color: #00d4ff;
+  font-weight: 700;
+  text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+}
+
+.header-meta {
+  display: flex;
+  gap: 2rem;
+  font-size: 1.1rem;
+  color: #a0a0a0;
+}
+
+.time {
+  font-weight: 600;
+  color: #00d4ff;
+}
+
+/* ============================================================================
+   MAIN LAYOUT
+   ============================================================================ */
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-main {
+  flex: 1;
+  padding: 2rem;
+  max-width: 1920px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 1.5rem;
+}
+
+/* ============================================================================
+   PANELS
+   ============================================================================ */
+
+.panel {
+  background: #1a1a2e;
+  border: 1px solid #2d2d44;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.panel:hover {
+  border-color: #00d4ff;
+  box-shadow: 0 8px 32px rgba(0, 212, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.panel h2 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: #00d4ff;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.panel h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+  color: #e0e0e0;
+}
+
+.no-data {
+  text-align: center;
+  color: #666;
+  padding: 2rem;
+  font-style: italic;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  color: #00d4ff;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ============================================================================
+   SERVICES PANEL
+   ============================================================================ */
+
+.services-panel {
+  grid-column: 1 / -1;
+}
+
+.health-summary {
+  margin-bottom: 1.5rem;
+}
+
+.summary-stat {
+  display: block;
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+  color: #00d4ff;
+}
+
+.summary-stat strong {
+  font-size: 1.5rem;
+  color: #00ff88;
+}
+
+.health-bar {
+  background: #2d2d44;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.health-fill {
+  background: linear-gradient(90deg, #00ff88 0%, #00d4ff 100%);
+  height: 100%;
+  transition: width 0.3s ease;
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+}
+
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.service-card {
+  background: #0f0f1e;
+  border: 1px solid #2d2d44;
+  border-radius: 8px;
+  padding: 1rem;
+  transition: all 0.3s ease;
+}
+
+.service-card.healthy {
+  border-color: #00ff88;
+  background: rgba(0, 255, 136, 0.05);
+}
+
+.service-card.healthy:hover {
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+}
+
+.service-card.unhealthy {
+  border-color: #ff4444;
+  background: rgba(255, 68, 68, 0.05);
+}
+
+.service-card.unhealthy:hover {
+  box-shadow: 0 0 20px rgba(255, 68, 68, 0.3);
+}
+
+.service-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.service-icon {
+  font-size: 1.2rem;
+}
+
+.service-name {
+  font-size: 0.9rem;
+  color: #e0e0e0;
+  word-break: break-word;
+}
+
+.service-details {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.status-badge {
+  background: #00d4ff;
+  color: #0f0f1e;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.status-code {
+  color: #888;
+}
+
+.error-text {
+  color: #ff4444;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+  word-break: break-word;
+}
+
+/* ============================================================================
+   MODELS PANEL
+   ============================================================================ */
+
+.models-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.model-item {
+  background: #0f0f1e;
+  border: 1px solid #2d2d44;
+  border-radius: 6px;
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.model-item:hover {
+  border-color: #00d4ff;
+  background: rgba(0, 212, 255, 0.1);
+}
+
+.model-item.selected {
+  border-color: #00ff88;
+  background: rgba(0, 255, 136, 0.15);
+}
+
+.model-name {
+  font-weight: 600;
+  color: #e0e0e0;
+  flex: 1;
+}
+
+.model-size {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.model-details {
+  background: #0f0f1e;
+  border: 1px solid #00d4ff;
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+/* ============================================================================
+   CHAT PANEL
+   ============================================================================ */
+
+.chat-panel {
+  grid-column: 1 / -1;
+}
+
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 500px;
+  background: #0f0f1e;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.message {
+  display: flex;
+  gap: 0.75rem;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-role {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.message-content {
+  background: #1a1a2e;
+  border: 1px solid #2d2d44;
+  border-radius: 6px;
+  padding: 0.75rem;
+  word-break: break-word;
+  flex: 1;
+}
+
+.message-user .message-content {
+  background: #0066cc;
+  border-color: #0088ff;
+  color: #fff;
+}
+
+.message-assistant .message-content {
+  background: #1a1a2e;
+  border-color: #00d4ff;
+  color: #e0e0e0;
+}
+
+.message-error .message-content {
+  background: #660000;
+  border-color: #ff4444;
+  color: #ffaaaa;
+}
+
+.message-loading {
+  justify-content: center;
+  color: #00d4ff;
+  font-style: italic;
+  animation: pulse 1.5s infinite;
+}
+
+.chat-input-section {
+  border-top: 1px solid #2d2d44;
+  padding: 1rem;
+  background: #0f0f1e;
+}
+
+.model-selector {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.model-selector label {
+  font-weight: 600;
+  color: #00d4ff;
+}
+
+.model-selector select {
+  background: #1a1a2e;
+  border: 1px solid #2d2d44;
+  color: #e0e0e0;
+  padding: 0.5rem;
+  border-radius: 4px;
+  flex: 1;
+}
+
+.input-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.input-group input {
+  flex: 1;
+  background: #1a1a2e;
+  border: 1px solid #2d2d44;
+  color: #e0e0e0;
+  padding: 0.75rem;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.input-group input:focus {
+  outline: none;
+  border-color: #00d4ff;
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+}
+
+.input-group input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ============================================================================
+   BUTTONS
+   ============================================================================ */
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #00d4ff 0%, #0088ff 100%);
+  color: #000;
+}
+
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background: #2d2d44;
+  color: #00d4ff;
+  border: 1px solid #00d4ff;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #00d4ff;
+  color: #0f0f1e;
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+}
+
+.btn-small {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+}
+
+/* ============================================================================
+   TOOLS PANEL
+   ============================================================================ */
+
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.tool-card {
+  background: #0f0f1e;
+  border: 1px solid #2d2d44;
+  border-radius: 8px;
+  padding: 1rem;
+  transition: all 0.3s ease;
+}
+
+.tool-card:hover {
+  border-color: #00d4ff;
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+  transform: translateY(-4px);
+}
+
+.tool-card h3 {
+  color: #00d4ff;
+  margin-bottom: 0.5rem;
+}
+
+.tool-card p {
+  color: #888;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  line-height: 1.4;
+}
+
+.tool-card .btn {
+  width: 100%;
+}
+
+/* ============================================================================
+   WORKFLOWS PANEL
+   ============================================================================ */
+
+.workflows-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.workflow-item {
+  background: #0f0f1e;
+  border: 1px solid #2d2d44;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.workflow-item:hover {
+  border-color: #00d4ff;
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+}
+
+.workflow-name {
+  font-weight: 600;
+  color: #e0e0e0;
+  flex: 1;
+}
+
+/* ============================================================================
+   SCROLLBAR
+   ============================================================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0f0f1e;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2d2d44;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00d4ff;
+}
+
+/* ============================================================================
+   RESPONSIVE
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  .dashboard-header h1 {
+    font-size: 1.8rem;
+  }
+
+  .header-meta {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .services-grid {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+
+  .chat-container {
+    height: 400px;
+  }
+
+  .tools-grid {
+    grid-template-columns: 1fr;
+  }
+}
