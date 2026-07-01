@@ -1,0 +1,17 @@
+﻿services:
+  vscode-dash-ai:
+    image: vscode-dash-ai
+    container_name: vscode-dash-ai
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: development
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: llama3.1
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/usr/src/app/data
+    command: npm run dev -- -H 0.0.0.0
